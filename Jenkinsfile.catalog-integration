@@ -14,14 +14,14 @@ pipeline {
 	}
 	parameters {
 		string(defaultValue: 'master', description: 'Which iTestCloud branch to use for the test execution?', name: 'BRANCH')
-    string(defaultValue: 'Chrome', description: 'Which browser to use for the test execution?', name: 'BROWSER')		
+   		string(defaultValue: 'Chrome', description: 'Which browser to use for the test execution?', name: 'BROWSER')		
 		string(defaultValue: 'icp4d', description: 'Which environment to test?', name: 'ENVIRONMENT')
 		string(defaultValue: '#power_isv_automated_tests', description: 'Which Slack channel to publish the results of the test execution?', name: 'SLACK_CHANNEL')
 		string(defaultValue: 'https://cpd-zen.apps.cp4d-410-rashmi.cp.fyre.ibm.com', description: 'What is the URL of the environment?', name: 'URL')
 		password(defaultValue:' ' , description: 'What is the password of the admin user? This information must only be provided when running the tests against a CPD cluster with IAM enabled.', name: 'ADMIN_PASSWORD')
 		booleanParam(name: 'RUN_DEEP_DIVE_TESTS',defaultValue: true, description: 'Should the deep dive tests be run?')
-    booleanParam(name: 'IAM_ENABLED', defaultValue: false , description: 'Is IAM enabled on the cluster?')
-    choice(choices: 'Average\nSlow\nSnail', name: 'PERFORMANCE', description: 'Specify the performance of the cluster. For example: Slow should be selected when executing tests against a ROCKS or Power CPD clusters.')
+    		booleanParam(name: 'IAM_ENABLED', defaultValue: false , description: 'Is IAM enabled on the cluster?')
+    		choice(choices: 'Average\nSlow\nSnail', name: 'PERFORMANCE', description: 'Specify the performance of the cluster. For example: Slow should be selected when executing tests against a ROCKS or Power CPD clusters.')
 		booleanParam(name: 'RUN_SPSS_TESTS', defaultValue: false , description: 'Whether to run SPSS Tests or not')
 	}
     agent {
