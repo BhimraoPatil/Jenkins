@@ -1,0 +1,91 @@
+
+pipeline {
+
+    /*
+     * Run everything on an existing agent configured with a label 'docker'.
+     * This agent will need docker, git and a jdk installed at a minimum.
+     */
+
+    options {
+	    buildDiscarder(logRotator(numToKeepStr:'10'))
+	    timeout(time: 120, unit: 'MINUTES')
+	    disableConcurrentBuilds()
+	    skipDefaultCheckout()
+	}
+	parameters {
+		string(defaultValue: 'master', description: 'Which iTestCloud branch to use for the test execution?', name: 'BRANCH')
+    string(defaultValue: 'Chrome', description: 'Which browser to use for the test execution?', name: 'BROWSER')		
+		string(defaultValue: 'icp4d', description: 'Which environment to test?', name: 'ENVIRONMENT')
+		string(defaultValue: '#power_isv_automated_tests', description: 'Which Slack channel to publish the results of the test execution?', name: 'SLACK_CHANNEL')
+		string(defaultValue: 'https://cpd-zen.apps.cp4d-410-rashmi.cp.fyre.ibm.com', description: 'What is the URL of the environment?', name: 'URL')
+		password(defaultValue:' ' , description: 'What is the password of the admin user? This information must only be provided when running the tests against a CPD cluster with IAM enabled.', name: 'ADMIN_PASSWORD')
+		booleanParam(name: 'RUN_DEEP_DIVE_TESTS',defaultValue: true, description: 'Should the deep dive tests be run?')
+    booleanParam(name: 'IAM_ENABLED', defaultValue: false , description: 'Is IAM enabled on the cluster?')
+    choice(choices: 'Average\nSlow\nSnail', name: 'PERFORMANCE', description: 'Specify the performance of the cluster. For example: Slow should be selected when executing tests against a ROCKS or Power CPD clusters.')
+		booleanParam(name: 'RUN_SPSS_TESTS', defaultValue: false , description: 'Whether to run SPSS Tests or not')
+	}
+    agent {
+        node {
+            label 'testnode_abhishek'
+        }
+    }
+    environment {
+        //env variables
+         CURDIR = "/root/abhishek/workspace/test"
+	    ANT_HOME = "/usr/local/apache-ant-1.9.16"
+	    ANT_OPTS = "-Xmx256M -Xmx512M -Xmx1024M"
+	    //PATH = "$PATH:$ANT_HOME/bin/"
+	    JAVA_HOME = "/usr/lib/jvm/java-11-openjdk-11.0.18.0.10-2.el8_7.x86_64"
+	    PATH = "$PATH:$JAVA_HOME/bin/:$ANT_HOME/bin/"
+	    //PARAMS = "runNotebookTests=true,runIamTests=false"
+    }
+    stages {
+	    stage('Prepare') {
+		    steps{
+			    script{
+				    echo 'Cloning files from (branch: "' + params.BRANCH + '" )'
+				    sh """
+				    pwd
+				    ls -lla
+				    """
+				    dir('repos/com.ibm.itest.cloud.common'){
+				    	git url: "https://github.ibm.com/iTestCloud/com.ibm.itest.cloud.common.git",credentialsId: 'AbhishekGitCred', branch: 'master'
+				    }
+				    dir('repos/com.ibm.itest.cloud.apsportal'){
+					 git url: "https://github.ibm.com/iTestCloud/com.ibm.itest.cloud.apsportal.git",credentialsId: 'AbhishekGitCred', branch: 'master'
+				    }
+				    dir('repos/com.ibm.itest.cloud.apsportal.sanity'){
+					 git url: "https://github.ibm.com/iTestCloud/com.ibm.itest.cloud.apsportal.catalog.integration.git",credentialsId: 'AbhishekGitCred', branch: 'master'
+				    }
+				    dir ('repos/com.ibm.itest.cloud.deployment'){
+						git url: "https://github.ibm.com/iTestCloud/com.ibm.itest.cloud.deployment.git",credentialsId: 'AbhishekGitCred', branch: 'master'
+				    }
+				    dir ('repos/com.ibm.itest.cloud.apsportal.vault'){
+					         git url: "https://github.ibm.com/iTestCloud/com.ibm.itest.cloud.apsportal.vault.git",credentialsId: 'AbhishekGitCred', branch: 'master'
+				    }
+		
+			    }
+		    }
+	    }
+        stage('Build and Execute Image') {
+            steps {
+                /*
+                 * Multiline strings can be used for larger scripts. It is also possible to put scripts in your shared library
+                 * and load them with 'libaryResource'
+                 */
+                sh """
+                    set -xe
+                    pwd
+		    echo $ANT_HOME
+		    echo $ANT_OPTS
+		    echo $PATH
+		    cp repos/com.ibm.itest.cloud.deployment/run-test-v4.sh run-test.sh
+		    chmod 777 run-test.sh
+		    ls -lla
+		    export PARAMS="runIamTests=${IAM_ENABLED},runSpssTests=${RUN_SPSS_TESTS}"
+                    /run-test.sh com.ibm.itest.cloud.apsportal.catalog.integration.scenario.ApsPortalCatalogIntegrationScenario catalogintegrations
+                   """
+            }
+        }
+    }
+}
